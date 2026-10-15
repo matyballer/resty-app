@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VUT FIT Resty & Deadliny</title>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --vut-red: #e11d48;
+            --fit-blue: #0ea5e9;
+            --urgent: #ef4444;
+            --warning: #f59e0b;
+            --ok: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 20px;
+            max-width: 750px;
+            margin: 0 auto;
+        }
+
+        /* Zamykací obrazovka */
+        #lockScreen {
+            position: fixed;
+            inset: 0;
+            background-color: var(--bg-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid #334155;
+        }
+
+        .login-card h2 {
+            margin: 15px 0 8px;
+            font-size: 1.4rem;
+        }
+
+        .login-card p {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .error-msg {
+            color: var(--urgent);
+            font-size: 0.85rem;
+            display: none;
+            margin-top: 4px;
+        }
+
+        /* Hlavní aplikace */
+        #appContent {
+            display: none;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #334155;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge-vut {
+            background: var(--vut-red);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .sync-status {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            background: #1e293b;
+            border-radius: 20px;
+            border: 1px solid #334155;
+        }
+
+        .icon-btn {
+            background: var(--bg-card);
+            border: 1px solid #334155;
+            color: var(--text-muted);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .icon-btn:hover {
+            color: white;
+            border-color: var(--fit-blue);
+        }
+
+        /* Formulář */
+        .form-card {
+            background: var(--bg-card);
+            padding: 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            display: grid;
+            grid-template-columns: 110px 1fr 180px auto;
+            gap: 10px;
+        }
+
+        @media (max-width: 650px) {
+            .form-card {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        input, select, button {
+            padding: 11px 14px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--fit-blue);
+        }
+
+        button.add-btn {
+            background: var(--fit-blue);
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        button.add-btn:hover {
+            opacity: 0.9;
+        }
+
+        button.add-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Filtry */
+        .filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+        }
+
+        .filter-btn {
+            background: var(--bg-card);
+            border: 1px solid #334155;
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            color: var(--text-muted);
+            transition: 0.2s;
+        }
+
+        .filter-btn.active {
+            background: var(--fit-blue);
+            color: white;
+            border-color: var(--fit-blue);
+            font-weight: 600;
+        }
+
+        /* Seznam úkolů */
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .task-item {
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 5px solid var(--fit-blue);
+            transition: transform 0.15s, opacity 0.2s;
+        }
+
+        .task-item:hover {
+            transform: translateX(3px);
+        }
+
+        .task-item.done {
+            opacity: 0.45;
+            border-left-color: #475569 !important;
+        }
+
+        .task-item.done .task-title {
+            text-decoration: line-through;
+        }
+
+        .task-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            accent-color: var(--ok);
+        }
+
+        .task-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .task-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .subject-tag {
+            background: #334155;
+            color: #38bdf8;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .task-title {
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+
+        .task-deadline {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .countdown {
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+        }
+
+        .countdown.urgent { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+        .countdown.warning { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .countdown.ok { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+
+        .delete-btn:hover {
+            color: var(--urgent);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 40px 20px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px dashed #334155;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ZAMYKACÍ OBRAZOVKA -->
+    <div id="lockScreen">
+        <div class="login-card">
+            <span class="badge-vut">VUT FIT</span>
+            <h2>Cloudový úkolníček</h2>
+            <p>Vlož svůj <strong>GitHub Token (ghp_...)</strong>. Uloží se do tohoto prohlížeče a automaticky propojí úkoly mezi PC a mobilem.</p>
+            <form class="login-form" id="loginForm">
+                <input type="password" id="tokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" required autofocus>
+                <div class="error-msg" id="errorMsg">Neplatný token nebo chyba připojení.</div>
+                <button type="submit" class="add-btn" id="loginBtn">Připojit a odemknout</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- HLAVNÍ OBSAH APLIKACE -->
+    <div id="appContent">
+        <header>
+            <h1><span class="badge-vut">VUT FIT</span> Resty</h1>
+            <div class="header-right">
+                <span class="sync-status" id="syncStatus">☁️ Připojeno</span>
+                <button class="icon-btn" onclick="syncFromCloud()" title="Obnovit data z cloudu">🔄</button>
+                <button class="icon-btn" onclick="lockApp()" title="Odpojit a zamknout">🔒</button>
+            </div>
+        </header>
+
+        <form class="form-card" id="taskForm">
+            <select id="subject" required>
+                <option value="IZP">IZP</option>
+                <option value="IDM">IDM</option>
+                <option value="ILG">ILG</option>
+                <option value="IEL">IEL</option>
+                <option value="IUS">IUS</option>
+                <option value="ITO">ITO</option>
+                <option value="Jiné">Jiné</option>
+            </select>
+            <input type="text" id="title" placeholder="Co musíš udělat? (např. 1. projekt)" required>
+            <input type="datetime-local" id="deadline" required>
+            <button type="submit" class="add-btn">+ Přidat</button>
+        </form>
+
+        <div class="filters" id="filters">
+            <button class="filter-btn active" data-filter="all">Všechny</button>
+            <button class="filter-btn" data-filter="IZP">IZP</button>
+            <button class="filter-btn" data-filter="IDM">IDM</button>
+            <button class="filter-btn" data-filter="ILG">ILG</button>
+            <button class="filter-btn" data-filter="IEL">IEL</button>
+            <button class="filter-btn" data-filter="IUS">IUS</button>
+            <button class="filter-btn" data-filter="ITO">ITO</button>
+            <button class="filter-btn" data-filter="Jiné">Jiné</button>
+        </div>
+
+        <div class="task-list" id="taskList"></div>
+    </div>
+
+    <script>
+        const GIST_FILENAME = "vut_fit_resty.json";
+        let githubToken = localStorage.getItem('vut_gh_token') || null;
+        let gistId = localStorage.getItem('vut_gist_id') || null;
+
+        let tasks = [];
+        let currentFilter = 'all';
+
+        const lockScreen = document.getElementById('lockScreen');
+        const appContent = document.getElementById('appContent');
+        const loginForm = document.getElementById('loginForm');
+        const tokenInput = document.getElementById('tokenInput');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const syncStatus = document.getElementById('syncStatus');
+        const taskForm = document.getElementById('taskForm');
+        const taskList = document.getElementById('taskList');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+
+        function setStatus(text) {
+            syncStatus.textContent = text;
+        }
+
+        // Najde existující Gist na GitHubu nebo vytvoří nový
+        async function initGist(token) {
+            setStatus("⏳ Hledám databázi...");
+            const res = await fetch('https://api.github.com/gists', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json'
+                }
+            });
+
+            if (!res.ok) throw new Error('Unauthorized');
+
+            const gists = await res.json();
+            const existing = gists.find(g => g.files && g.files[GIST_FILENAME]);
+
+            if (existing) {
+                gistId = existing.id;
+                localStorage.setItem('vut_gist_id', gistId);
+                await loadFromGist(token, gistId);
+            } else {
+                // Vytvoříme úplně nový skrytý Gist s výchozím úkolem na 18. 10.
+                const initialTasks = [
+                    {
+                        id: 1,
+                        subject: 'IZP',
+                        title: 'Odevzdat projekt',
+                        deadline: '2026-10-18T23:59',
+                        done: false
+                    }
+                ];
+                const createRes = await fetch('https://api.github.com/gists', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/vnd.github+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        description: "VUT FIT Resty a Deadliny (Databáze)",
+                        public: false,
+                        files: {
+                            [GIST_FILENAME]: {
+                                content: JSON.stringify(initialTasks, null, 2)
+                            }
+                        }
+                    })
+                });
+
+                if (!createRes.ok) throw new Error('Create failed');
+                const newGist = await createRes.json();
+                gistId = newGist.id;
+                localStorage.setItem('vut_gist_id', gistId);
+                tasks = initialTasks;
+                setStatus("☁️ Uloženo v cloudu");
+                renderTasks();
+            }
+        }
+
+        async function loadFromGist(token, id) {
+            setStatus("⏳ Stahuji úkoly...");
+            // Přidáme timestamp proti kešování prohlížeče
+            const res = await fetch(`https://api.github.com/gists/${id}?t=${Date.now()}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json'
+                }
+            });
+
+            if (!res.ok) throw new Error('Load failed');
+            const data = await res.json();
+            const content = data.files[GIST_FILENAME].content;
+            tasks = JSON.parse(content || "[]");
+            setStatus(`☁️ Aktivní (${tasks.filter(t => !t.done).length} restů)`);
+            renderTasks();
+        }
+
+        async function saveToGist() {
+            if (!githubToken || !gistId) return;
+            setStatus("⏳ Ukládám...");
+            renderTasks();
+
+            try {
+                const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${githubToken}`,
+                        'Accept': 'application/vnd.github+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            [GIST_FILENAME]: {
+                                content: JSON.stringify(tasks, null, 2)
+                            }
+                        }
+                    })
+                });
+                if (!res.ok) throw new Error('Save failed');
+                setStatus(`☁️ Uloženo (${tasks.filter(t => !t.done).length} restů)`);
+            } catch (e) {
+                setStatus("⚠️ Chyba ukládání!");
+            }
+        }
+
+        window.syncFromCloud = async function() {
+            if (githubToken && gistId) {
+                try {
+                    await loadFromGist(githubToken, gistId);
+                } catch (e) {
+                    setStatus("⚠️ Chyba synchronizace");
+                }
+            }
+        };
+
+        // Přihlášení přes Token
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const enteredToken = tokenInput.value.trim();
+            if (!enteredToken) return;
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = "Ověřuji klíč...";
+            errorMsg.style.display = 'none';
+
+            try {
+                await initGist(enteredToken);
+                githubToken = enteredToken;
+                localStorage.setItem('vut_gh_token', enteredToken);
+                tokenInput.value = '';
+                lockScreen.style.display = 'none';
+                appContent.style.display = 'block';
+            } catch (err) {
+                errorMsg.style.display = 'block';
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = "Připojit a odemknout";
+            }
+        });
+
+        window.lockApp = function() {
+            localStorage.removeItem('vut_gh_token');
+            localStorage.removeItem('vut_gist_id');
+            githubToken = null;
+            gistId = null;
+            lockScreen.style.display = 'flex';
+            appContent.style.display = 'none';
+        };
+
+        // Automatické přihlášení při načtení stránky
+        async function boot() {
+            if (githubToken) {
+                lockScreen.style.display = 'none';
+                appContent.style.display = 'block';
+                try {
+                    if (gistId) {
+                        await loadFromGist(githubToken, gistId);
+                    } else {
+                        await initGist(githubToken);
+                    }
+                } catch (e) {
+                    lockApp();
+                }
+            }
+        }
+
+        // --- VYKRESLOVÁNÍ A LOGIKA ---
+        function getCountdown(deadlineStr) {
+            const now = new Date();
+            const deadline = new Date(deadlineStr);
+            const diffMs = deadline - now;
+            const diffHours = diffMs / (1000 * 60 * 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            if (diffMs < 0) {
+                return { text: 'Po termínu!', status: 'urgent', color: 'var(--urgent)' };
+            } else if (diffHours <= 24) {
+                const h = Math.max(1, Math.floor(diffHours));
+                return { text: `Zbývá ${h} hod!`, status: 'urgent', color: 'var(--urgent)' };
+            } else if (diffDays <= 3) {
+                return { text: `Zbývají ${diffDays} dny (${Math.floor(diffHours % 24)}h)`, status: 'warning', color: 'var(--warning)' };
+            } else {
+                return { text: `Zbývá ${diffDays} dní`, status: 'ok', color: 'var(--ok)' };
+            }
+        }
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('cs-CZ', { 
+                day: 'numeric', 
+                month: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+
+        function renderTasks() {
+            taskList.innerHTML = '';
+
+            const sortedTasks = [...tasks].sort((a, b) => {
+                if (a.done !== b.done) return a.done ? 1 : -1;
+                return new Date(a.deadline) - new Date(b.deadline);
+            });
+
+            const filtered = sortedTasks.filter(t => 
+                currentFilter === 'all' ? true : t.subject === currentFilter
+            );
+
+            if (filtered.length === 0) {
+                taskList.innerHTML = `<div class="empty-state">Žádné resty v této kategorii. Můžeš jít v klidu pařit nebo spát! 🎉</div>`;
+                return;
+            }
+
+            filtered.forEach(task => {
+                const cd = getCountdown(task.deadline);
+                const item = document.createElement('div');
+                item.className = `task-item ${task.done ? 'done' : ''}`;
+                if (!task.done) {
+                    item.style.borderLeftColor = cd.color;
+                }
+
+                item.innerHTML = `
+                    <div class="task-left">
+                        <input type="checkbox" class="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTask(${task.id})">
+                        <div class="task-info">
+                            <div class="task-header">
+                                <span class="subject-tag">${task.subject}</span>
+                                <span class="task-title">${task.title}</span>
+                            </div>
+                            <div class="task-deadline">
+                                <span>📅 ${formatDate(task.deadline)}</span>
+                                ${!task.done ? `<span class="countdown ${cd.status}">${cd.text}</span>` : '<span style="color: var(--ok); font-weight:600;">✔ Hotovo</span>'}
+                            </div>
+                        </div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteTask(${task.id})" title="Smazat úkol">✕</button>
+                `;
+                taskList.appendChild(item);
+            });
+        }
+
+        taskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const subject = document.getElementById('subject').value;
+            const title = document.getElementById('title').value.trim();
+            const deadline = document.getElementById('deadline').value;
+
+            if (!title || !deadline) return;
+
+            tasks.push({
+                id: Date.now(),
+                subject,
+                title,
+                deadline,
+                done: false
+            });
+
+            document.getElementById('title').value = '';
+            await saveToGist();
+        });
+
+        window.toggleTask = async function(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.done = !task.done;
+                await saveToGist();
+            }
+        };
+
+        window.deleteTask = async function(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            await saveToGist();
+        };
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderTasks();
+            });
+        });
+
+        // Automatická synchronizace, když se vrátíš do okna prohlížeče / odemkneš mobil
+        window.addEventListener('focus', () => {
+            syncFromCloud();
+        });
+
+        const now = new Date();
+        now.setHours(23, 59, 0, 0);
+        const tzOffset = now.getTimezoneOffset() * 60000;
+        document.getElementById('deadline').value = new Date(now - tzOffset).toISOString().slice(0, 16);
+
+        boot();
+        setInterval(renderTasks, 60000);
+    </script>
+</body>
+</html>
